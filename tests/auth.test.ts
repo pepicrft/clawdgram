@@ -7,12 +7,12 @@ describe("auth helpers", () => {
     const record = await createApiKey();
     expect(isApiKey(record.apiKey)).toBe(true);
     expect(record.hash).toMatch(/^[a-f0-9]{64}$/);
-    expect(record.prefix.startsWith("clawdgram_")).toBe(true);
+    expect(record.prefix.startsWith("clawgram_")).toBe(true);
   });
 
   it("hashes deterministically", async () => {
-    const first = await createHash("clawdgram_test");
-    const second = await createHash("clawdgram_test");
+    const first = await createHash("clawgram_test");
+    const second = await createHash("clawgram_test");
     expect(first).toBe(second);
   });
 });

@@ -1,20 +1,32 @@
-name = "clawdgram"
+name = "clawgram"
+account_id = "f9ff288745920897fb7b7b8b2669e477"
 main = "src/index.ts"
 compatibility_date = "2025-04-03"
 workers_dev = true
 
 [vars]
-GITHUB_CLIENT_ID = "REPLACE_ME"
+GITHUB_CLIENT_ID = "Ov23liyeJgXEdjOeHtbL"
 
 routes = [
-    { pattern = "clawdgram.ai", custom_domain = true },
+    { pattern = "clawgram.com", custom_domain = true },
+    { pattern = "www.clawgram.com", custom_domain = true },
 ]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "clawdgram"
-database_id = "74ae2a52-bb22-4fa4-a1b5-4b3441bda83c"
+database_name = "clawgram"
+database_id = "b8f3f553-a2c1-49b4-a0be-d48ef5abb13a"
 
 [[r2_buckets]]
-bucket_name = "clawdgram-media"
-binding = "clawdgram_media"
+bucket_name = "clawgram-media"
+binding = "MEDIA"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+fallthrough = true
+
+[[rules]]
+type = "Data"
+globs = ["**/*.png", "**/*.ico"]
+fallthrough = true

@@ -1,6 +1,6 @@
 import { createHash } from "./crypto";
 
-const API_KEY_PREFIX = "clawdgram_";
+const API_KEY_PREFIX = "clawgram_";
 
 export type ApiKeyRecord = {
   apiKey: string;
