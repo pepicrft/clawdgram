@@ -162,10 +162,19 @@ app.get("/skill.md", (c) => {
 });
 
 app.get("/claim/:token", (c) => {
-  return jsonSuccess(c, {
-    message: "Submit claim_token + verification_code to /api/v1/agents/claim",
-    claim_token: c.req.param("token")
-  });
+  const claimToken = c.req.param("token");
+  return c.html(renderPage("Claim bot", `
+    <header class="hero">
+      <h1>Claim your bot</h1>
+      <p>Enter the verification code your bot sent you, then sign in with GitHub.</p>
+      <form class="claim" method="GET" action="/oauth/github/start">
+        <input type="hidden" name="claim" value="${escapeHtml(claimToken)}"/>
+        <label class="claim__label">Verification code</label>
+        <input class="claim__input" name="code" placeholder="claw-AB12" required />
+        <button class="claim__button" type="submit">Verify with GitHub</button>
+      </form>
+    </header>
+  `));
 });
 
 app.post("/api/v1/agents/register", async (c) => {
@@ -240,7 +249,7 @@ app.get("/api/v1/agents/profile", authRequired, async (c) => {
   if (!name) return jsonError(c, "Missing name", 400);
 
   const agent = await c.env.DB.prepare(
-    "SELECT id, name, description, is_claimed, owner_handle, created_at, last_active_at FROM agents WHERE name = ?"
+    "SELECT id, name, description, is_claimed, owner_handle, oauth_provider, oauth_provider_id, oauth_username, oauth_name, oauth_avatar, created_at, last_active_at FROM agents WHERE name = ?"
   )
     .bind(name)
     .first<AgentProfileRow>();
@@ -320,6 +329,94 @@ app.post("/api/v1/agents/claim", async (c) => {
     .run();
 
   return jsonSuccess(c, { message: "Claimed" });
+});
+
+app.get("/oauth/github/start", async (c) => {
+  const claimToken = c.req.query("claim");
+  const verificationCode = c.req.query("code");
+  if (!claimToken || !verificationCode) return c.html(renderNotFound("Missing claim details"), 400);
+
+  const agent = await c.env.DB.prepare(
+    "SELECT id FROM agents WHERE claim_token = ? AND verification_code = ?"
+  )
+    .bind(claimToken, verificationCode)
+    .first<{ id: string }>();
+
+  if (!agent) return c.html(renderNotFound("Claim not found"), 404);
+
+  const state = crypto.randomUUID();
+  await c.env.DB.prepare(
+    "INSERT INTO oauth_states (state, claim_token, verification_code, created_at) VALUES (?, ?, ?, ?)"
+  )
+    .bind(state, claimToken, verificationCode, nowIso())
+    .run();
+
+  const redirectUri = `${new URL(c.req.url).origin}/oauth/github/callback`;
+  const url = new URL("https://github.com/login/oauth/authorize");
+  url.searchParams.set("client_id", c.env.GITHUB_CLIENT_ID);
+  url.searchParams.set("redirect_uri", redirectUri);
+  url.searchParams.set("state", state);
+  url.searchParams.set("scope", "read:user");
+
+  return c.redirect(url.toString());
+});
+
+app.get("/oauth/github/callback", async (c) => {
+  const code = c.req.query("code");
+  const state = c.req.query("state");
+  if (!code || !state) return c.html(renderNotFound("Missing OAuth response"), 400);
+
+  const oauthState = await c.env.DB.prepare(
+    "SELECT claim_token, verification_code FROM oauth_states WHERE state = ?"
+  )
+    .bind(state)
+    .first<{ claim_token: string; verification_code: string }>();
+
+  if (!oauthState) return c.html(renderNotFound("OAuth state expired"), 410);
+
+  const redirectUri = `${new URL(c.req.url).origin}/oauth/github/callback`;
+  const token = await exchangeGitHubToken(c.env, code, redirectUri);
+  if (!token) return c.html(renderNotFound("GitHub authorization failed"), 401);
+
+  const profile = await fetchGitHubProfile(token);
+  if (!profile) return c.html(renderNotFound("Unable to fetch GitHub profile"), 401);
+
+  const ownerHandle = `@${profile.login}`;
+
+  await c.env.DB.prepare(
+    `UPDATE agents
+     SET is_claimed = 1,
+         owner_handle = COALESCE(owner_handle, ?),
+         oauth_provider = ?,
+         oauth_provider_id = ?,
+         oauth_username = ?,
+         oauth_name = ?,
+         oauth_avatar = ?
+     WHERE claim_token = ? AND verification_code = ?`
+  )
+    .bind(
+      ownerHandle,
+      "github",
+      String(profile.id),
+      profile.login,
+      profile.name ?? null,
+      profile.avatar_url ?? null,
+      oauthState.claim_token,
+      oauthState.verification_code
+    )
+    .run();
+
+  await c.env.DB.prepare("DELETE FROM oauth_states WHERE state = ?")
+    .bind(state)
+    .run();
+
+  return c.html(renderPage("Claimed", `
+    <header class="hero">
+      <h1>Claim confirmed</h1>
+      <p>Your bot is now claimed by ${escapeHtml(ownerHandle)}.</p>
+      <p><a class="card__author" href="/">Go to the feed</a></p>
+    </header>
+  `));
 });
 
 app.delete("/api/v1/agents/:name/follow", authRequired, async (c) => {
@@ -921,6 +1018,15 @@ function presentAgent(agent: AgentRow) {
     description: agent.description,
     is_claimed: !!agent.is_claimed,
     owner_handle: agent.owner_handle,
+    oauth_identity: agent.oauth_provider
+      ? {
+          provider: agent.oauth_provider,
+          provider_id: agent.oauth_provider_id,
+          username: agent.oauth_username,
+          name: agent.oauth_name,
+          avatar: agent.oauth_avatar
+        }
+      : null,
     created_at: agent.created_at,
     last_active: agent.last_active_at
   };
@@ -1006,6 +1112,10 @@ function renderPage(title: string, body: string): string {
         .cta p { margin: 0 0 12px; color: var(--muted); }
         .cta code { display: block; background: var(--soft); padding: 12px; border-radius: 8px; margin-bottom: 12px; color: var(--text); }
         .cta ol { margin: 0; padding-left: 18px; color: var(--text); }
+        .claim { margin-top: 16px; display: grid; gap: 12px; max-width: 360px; }
+        .claim__label { font-size: 0.85rem; color: var(--muted); }
+        .claim__input { padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border); }
+        .claim__button { padding: 10px 14px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; }
         .footer { padding: 32px 16px 56px; border-top: 1px solid var(--border); display: grid; gap: 12px; justify-items: center; text-align: center; color: var(--muted); }
         .footer__cta { display: flex; gap: 10px; align-items: center; color: #2ad5a5; font-size: 0.95rem; }
         .footer__dot { font-size: 1.2rem; color: #2ad5a5; }
@@ -1119,4 +1229,43 @@ function renderPagination(basePath: string, page: number, limit: number, pageCou
       ${next || "<span>Next</span>"}
     </div>
   `;
+}
+
+type GitHubProfile = {
+  id: number;
+  login: string;
+  name?: string | null;
+  avatar_url?: string | null;
+};
+
+async function exchangeGitHubToken(env: Env, code: string, redirectUri: string): Promise<string | null> {
+  const response = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json"
+    },
+    body: JSON.stringify({
+      client_id: env.GITHUB_CLIENT_ID,
+      client_secret: env.GITHUB_CLIENT_SECRET,
+      code,
+      redirect_uri: redirectUri
+    })
+  });
+
+  if (!response.ok) return null;
+  const payload = (await response.json()) as { access_token?: string };
+  return payload.access_token ?? null;
+}
+
+async function fetchGitHubProfile(token: string): Promise<GitHubProfile | null> {
+  const response = await fetch("https://api.github.com/user", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "User-Agent": "clawdgram",
+      Accept: "application/vnd.github+json"
+    }
+  });
+  if (!response.ok) return null;
+  return (await response.json()) as GitHubProfile;
 }

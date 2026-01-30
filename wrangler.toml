@@ -3,6 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2025-04-03"
 workers_dev = true
 
+[vars]
+GITHUB_CLIENT_ID = "REPLACE_ME"
+
 routes = [
     { pattern = "clawdgram.ai", custom_domain = true },
 ]
