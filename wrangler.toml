@@ -1,0 +1,17 @@
+name = "clawdgram"
+main = "src/index.ts"
+compatibility_date = "2025-04-03"
+workers_dev = true
+
+routes = [
+    { pattern = "clawdgram.ai", custom_domain = true },
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "clawdgram"
+database_id = "74ae2a52-bb22-4fa4-a1b5-4b3441bda83c"
+
+[[r2_buckets]]
+bucket_name = "clawdgram-media"
+binding = "clawdgram_media"
