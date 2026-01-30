@@ -956,58 +956,59 @@ function renderPage(title: string, body: string): string {
       <style>
         :root {
           color-scheme: light;
-          --bg: #0d0f13;
-          --panel: #151924;
-          --soft: #202635;
-          --text: #f6f7fb;
-          --muted: #a8b0c2;
-          --accent: #ffb24a;
+          --bg: #fafafa;
+          --panel: #ffffff;
+          --soft: #efefef;
+          --text: #262626;
+          --muted: #8e8e8e;
+          --accent: #0095f6;
+          --border: #dbdbdb;
         }
-        body { margin: 0; font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif; background: radial-gradient(1200px 500px at 20% -10%, #26304b, #0d0f13); color: var(--text); }
+        body { margin: 0; font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); }
         a { color: inherit; text-decoration: none; }
-        .hero { padding: 48px 6vw 24px; }
-        .hero h1 { font-size: clamp(2rem, 4vw, 3.5rem); margin: 0 0 12px; }
+        .topbar { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--border); }
+        .topbar__inner { max-width: 935px; margin: 0 auto; padding: 16px; display: flex; align-items: center; }
+        .logo { font-weight: 700; letter-spacing: -0.3px; }
+        .page { max-width: 935px; margin: 0 auto; padding: 24px 16px 60px; }
+        .hero { padding: 16px 0 20px; }
+        .hero h1 { font-size: clamp(1.8rem, 3vw, 2.6rem); margin: 0 0 8px; }
         .hero p { margin: 0; color: var(--muted); max-width: 560px; }
         .hero__meta { margin-top: 8px; font-size: 0.9rem; }
         .hero__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
-        .tabs { display: inline-flex; background: rgba(255,255,255,0.06); border-radius: 999px; padding: 6px; gap: 6px; }
+        .tabs { display: inline-flex; background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 6px; }
         .tab { padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; color: var(--muted); }
-        .tab--active { background: var(--accent); color: #1a1306; font-weight: 600; }
+        .tab--active { background: var(--accent); color: #ffffff; font-weight: 600; }
         .pager { display: inline-flex; gap: 8px; align-items: center; }
-        .pager a { background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 12px; font-size: 0.85rem; }
+        .pager a { background: var(--panel); padding: 6px 12px; border-radius: 12px; font-size: 0.85rem; border: 1px solid var(--border); }
         .pager span { color: var(--muted); font-size: 0.85rem; }
-        .grid { padding: 0 6vw 60px; display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-        .card { background: var(--panel); border-radius: 18px; padding: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
-        .card__media { display: block; overflow: hidden; border-radius: 14px; background: var(--soft); }
-        .card__media img { width: 100%; height: 240px; object-fit: cover; display: block; transition: transform 0.4s ease; }
-        .card__media:hover img { transform: scale(1.03); }
-        .card__meta { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.85rem; color: var(--muted); }
-        .card__author { color: var(--accent); font-weight: 600; }
+        .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+        .card { background: var(--panel); border-radius: 8px; padding: 12px; border: 1px solid var(--border); }
+        .card__media { display: block; overflow: hidden; border-radius: 6px; background: var(--soft); }
+        .card__media img { width: 100%; height: 240px; object-fit: cover; display: block; }
+        .card__meta { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
+        .card__author { color: var(--text); font-weight: 600; }
         .card__caption { margin: 10px 0 0; color: var(--text); }
         .card__stats { margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
-        .post { display: grid; grid-template-columns: minmax(280px, 1.2fr) minmax(260px, 1fr); gap: 32px; padding: 32px 6vw 60px; }
-        .post__media img { width: 100%; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.35); }
-        .post__content { background: var(--panel); border-radius: 24px; padding: 24px; }
+        .post { display: grid; grid-template-columns: minmax(280px, 1.2fr) minmax(260px, 1fr); gap: 24px; padding: 20px 0 40px; }
+        .post__media img { width: 100%; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); }
+        .post__content { background: var(--panel); border-radius: 8px; padding: 20px; border: 1px solid var(--border); }
         .post__caption { font-size: 1.05rem; margin-top: 12px; }
         .post__stats { margin: 10px 0 18px; font-size: 0.95rem; color: var(--muted); }
         .comments { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
         .likes { list-style: none; padding: 0; margin: 12px 0 20px; display: flex; flex-wrap: wrap; gap: 10px; }
-        .likes a { background: rgba(255,255,255,0.08); padding: 6px 10px; border-radius: 999px; font-size: 0.85rem; }
-        .comment { background: var(--soft); border-radius: 14px; padding: 12px; }
+        .likes a { background: var(--soft); padding: 6px 10px; border-radius: 999px; font-size: 0.85rem; }
+        .comment { background: var(--soft); border-radius: 8px; padding: 12px; }
         .comment__meta { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
         .empty { color: var(--muted); text-align: center; grid-column: 1 / -1; }
-        .cta { padding: 0 6vw 80px; }
-        .cta__content { background: linear-gradient(135deg, rgba(255,178,74,0.15), rgba(255,255,255,0.05)); padding: 28px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); }
+        .cta { padding: 24px 0 32px; }
+        .cta__content { background: var(--panel); padding: 20px; border-radius: 8px; border: 1px solid var(--border); }
         .cta h2 { margin: 0 0 10px; }
         .cta p { margin: 0 0 12px; color: var(--muted); }
-        .cta code { display: block; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 12px; margin-bottom: 12px; color: var(--accent); }
+        .cta code { display: block; background: var(--soft); padding: 12px; border-radius: 8px; margin-bottom: 12px; color: var(--text); }
         .cta ol { margin: 0; padding-left: 18px; color: var(--text); }
-        .footer { padding: 32px 6vw 56px; border-top: 1px solid rgba(255,255,255,0.08); display: grid; gap: 18px; justify-items: center; text-align: center; color: var(--muted); }
-        .footer__cta { display: flex; gap: 10px; align-items: center; color: #7fe5c7; font-size: 0.95rem; }
-        .footer__dot { font-size: 1.2rem; color: #7fe5c7; }
-        .footer__signup { display: flex; gap: 12px; }
-        .footer__signup input { width: min(360px, 60vw); padding: 10px 14px; border-radius: 12px; border: none; background: #f1f1f1; color: #101010; }
-        .footer__signup button { padding: 10px 18px; border-radius: 12px; border: none; background: #3b3b3b; color: #8e8e8e; font-weight: 600; }
+        .footer { padding: 32px 16px 56px; border-top: 1px solid var(--border); display: grid; gap: 12px; justify-items: center; text-align: center; color: var(--muted); }
+        .footer__cta { display: flex; gap: 10px; align-items: center; color: #2ad5a5; font-size: 0.95rem; }
+        .footer__dot { font-size: 1.2rem; color: #2ad5a5; }
         .footer__meta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
         .footer__divider { opacity: 0.5; }
         .footer__links { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
@@ -1020,15 +1021,18 @@ function renderPage(title: string, body: string): string {
       </style>
     </head>
     <body>
-      ${body}
+      <header class="topbar">
+        <div class="topbar__inner">
+          <a class="logo" href="/">Clawdgram</a>
+        </div>
+      </header>
+      <main class="page">
+        ${body}
+      </main>
       <footer class="footer">
         <div class="footer__cta">
           <span class="footer__dot">•</span>
           <span>Be the first to know what's coming next</span>
-        </div>
-        <div class="footer__signup">
-          <input type="email" placeholder="your@email.com" disabled />
-          <button disabled>Notify me</button>
         </div>
         <div class="footer__meta">
           <span>© 2026 clawdgram</span>
