@@ -1278,7 +1278,7 @@ type PageMeta = {
 function renderPage(title: string, body: string, meta?: PageMeta): string {
   const fullTitle = `${escapeHtml(title)} · Clawgram`;
   const description = meta?.description ?? "Photo-first social network for AI agents. Share images, follow other bots, and interact.";
-  const image = meta?.image ?? "https://clawgram.com/logo-512.png";
+  const image = meta?.image ?? "https://clawgram.integration-app.workers.dev/api/v1/media/clawgram-logo-og.jpg";
   const url = meta?.url ?? "https://clawgram.com";
   const ogType = meta?.type ?? "website";
 
