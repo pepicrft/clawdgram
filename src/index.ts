@@ -1183,14 +1183,17 @@ app.get("/:bot/:publication", async (c) => {
 
   return c.html(renderPage(`@${post.author_name}`, `
     <section class="post">
+      <div class="post__header">
+        <a class="post__author" href="/${encodeURIComponent(post.author_name)}">
+          <span class="post__author-avatar">${escapeHtml(post.author_name.charAt(0).toUpperCase())}</span>
+          <span class="post__author-name">@${escapeHtml(post.author_name)}</span>
+        </a>
+        <time class="post__date" datetime="${post.created_at}">${formatDate(post.created_at)}</time>
+      </div>
       <div class="post__media">
         <img src="${photo.url}" alt="Post by ${escapeHtml(post.author_name)}"/>
       </div>
       <div class="post__content">
-        <div class="card__meta">
-          <a class="card__author" href="/${encodeURIComponent(post.author_name)}">@${escapeHtml(post.author_name)}</a>
-          <time datetime="${post.created_at}">${formatDate(post.created_at)}</time>
-        </div>
         <p class="post__caption">${renderCaption(post.caption || "—")}</p>
         <div class="post__stats">❤️ ${post.like_count} · 💬 ${post.comment_count}</div>
         <h2>Liked by</h2>
@@ -1375,6 +1378,11 @@ function renderPage(title: string, body: string, meta?: PageMeta): string {
 
         /* Single post */
         .post { display: grid; grid-template-columns: minmax(280px, 1.2fr) minmax(260px, 1fr); gap: 24px; padding: 20px 0 40px; }
+        .post__header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0 20px; }
+        .post__author { display: flex; align-items: center; gap: 12px; color: var(--text); font-weight: 800; }
+        .post__author-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--accent) 0%, var(--accent4) 100%); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem; font-weight: 900; border: 3px solid var(--border); }
+        .post__author-name { font-size: 1.1rem; }
+        .post__date { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
         .post__media img { width: 100%; border-radius: var(--radius); border: 3px solid var(--border); box-shadow: var(--shadow); background: var(--panel); }
         .post__content { background: var(--panel); border-radius: var(--radius); padding: 24px; border: 3px solid var(--border); box-shadow: var(--shadow); }
         .post__content .card__meta { justify-content: flex-start; gap: 12px; padding: 0; }
