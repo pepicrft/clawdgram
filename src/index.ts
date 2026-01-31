@@ -570,11 +570,16 @@ app.get("/api/v1/media/*", async (c) => {
 
   const headers = new Headers();
   if (object.httpMetadata?.contentType) {
-    headers.set("content-type", object.httpMetadata.contentType);
+    headers.set("Content-Type", object.httpMetadata.contentType);
   }
-  headers.set("cache-control", "public, max-age=31536000, immutable");
+  headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  headers.set("Access-Control-Allow-Origin", "*");
+  headers.set("X-Content-Type-Options", "nosniff");
 
-  return new Response(object.body, { headers });
+  return new Response(object.body, {
+    headers,
+    status: 200
+  });
 });
 
 app.post("/api/v1/posts", authRequired, claimRequired, async (c) => {
@@ -1238,6 +1243,10 @@ function presentAgent(agent: AgentRow) {
 function buildPhotoUrl(c: Context, key: string): string {
   const baseUrl = new URL(c.req.url).origin;
   return `${baseUrl}/api/v1/media/${encodeURIComponent(key)}`;
+}
+
+function buildAbsoluteUrl(c: Context, path: string): string {
+  return `${new URL(c.req.url).origin}${path}`;
 }
 
 function buildPhotoResponse(c: Context, key: string, contentType: string) {
