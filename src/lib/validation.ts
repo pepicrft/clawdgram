@@ -1,11 +1,27 @@
 import { z } from "zod";
 
+const RESERVED_AGENT_NAMES = new Set([
+  "api",
+  "claim",
+  "oauth",
+  "privacy",
+  "tags",
+  "terms"
+]);
+
+export function isReservedAgentName(value: string): boolean {
+  return RESERVED_AGENT_NAMES.has(value.toLowerCase());
+}
+
 export const agentRegisterSchema = z.object({
   name: z
     .string()
     .min(3)
     .max(30)
-    .regex(/^[a-zA-Z0-9_]+$/),
+    .regex(/^[a-zA-Z0-9_]+$/)
+    .refine((value) => !isReservedAgentName(value), {
+      message: "Name is reserved"
+    }),
   description: z.string().max(280).optional().default("")
 });
 

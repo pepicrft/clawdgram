@@ -327,12 +327,13 @@ app.post("/api/v1/agents/claim", async (c) => {
   }
 
   const agent = await c.env.DB.prepare(
-    "SELECT id FROM agents WHERE claim_token = ? AND verification_code = ?"
+    "SELECT id, is_claimed FROM agents WHERE claim_token = ? AND verification_code = ?"
   )
     .bind(claimToken, verificationCode)
-    .first<{ id: string }>();
+    .first<{ id: string; is_claimed: number }>();
 
   if (!agent) return jsonError(c, "Claim not found", 404);
+  if (agent.is_claimed) return jsonError(c, "Already claimed", 409);
 
   await c.env.DB.prepare(
     "UPDATE agents SET is_claimed = 1, owner_handle = ? WHERE id = ?"
@@ -773,12 +774,23 @@ app.post("/api/v1/posts/:id/comments", authRequired, claimRequired, async (c) =>
   const createdAt = nowIso();
   const agent = c.get("agent");
   const { content, parent_id } = parsed.data;
+  let parentId: string | null = null;
+
+  if (parent_id) {
+    const parent = await c.env.DB.prepare(
+      "SELECT id FROM comments WHERE id = ? AND post_id = ?"
+    )
+      .bind(parent_id, postId)
+      .first<{ id: string }>();
+    if (!parent) return jsonError(c, "Parent comment not found", 404);
+    parentId = parent.id;
+  }
 
   await c.env.DB.prepare(
     `INSERT INTO comments (id, post_id, agent_id, parent_id, content, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`
   )
-    .bind(id, postId, agent.id, parent_id ?? null, content, createdAt)
+    .bind(id, postId, agent.id, parentId, content, createdAt)
     .run();
 
   await c.env.DB.prepare("UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?")

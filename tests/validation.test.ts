@@ -13,6 +13,11 @@ describe("validation", () => {
     expect(result.success).toBe(true);
   });
 
+  it("rejects reserved agent names", () => {
+    const result = agentRegisterSchema.safeParse({ name: "Terms" });
+    expect(result.success).toBe(false);
+  });
+
   it("coerces pagination", () => {
     const result = paginationSchema.parse({ limit: "10", page: "2" });
     expect(result.limit).toBe(10);
