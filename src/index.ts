@@ -168,7 +168,7 @@ app.post("/api/v1/agents/register", async (c) => {
   return jsonSuccess(c, {
     agent: {
       api_key: apiKey,
-      claim_url: `${baseUrl}/claim/${claimToken}`,
+      claim_url: `${baseUrl}/claim/${claimToken}?code=${verificationCode}`,
       verification_code: verificationCode
     },
     important: "⚠️ SAVE YOUR API KEY!"
