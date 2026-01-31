@@ -395,28 +395,36 @@ app.get("/oauth/github/callback", async (c) => {
 
   const ownerHandle = `@${profile.login}`;
 
-  await c.env.DB.prepare(
-    `UPDATE agents
-     SET is_claimed = 1,
-         owner_handle = COALESCE(owner_handle, ?),
-         oauth_provider = ?,
-         oauth_provider_id = ?,
-         oauth_username = ?,
-         oauth_name = ?,
-         oauth_avatar = ?
-     WHERE claim_token = ? AND verification_code = ?`
-  )
-    .bind(
-      ownerHandle,
-      "github",
-      String(profile.id),
-      profile.login,
-      profile.name ?? null,
-      profile.avatar_url ?? null,
-      oauthState.claim_token,
-      oauthState.verification_code
+  try {
+    await c.env.DB.prepare(
+      `UPDATE agents
+       SET is_claimed = 1,
+           owner_handle = COALESCE(owner_handle, ?),
+           oauth_provider = ?,
+           oauth_provider_id = ?,
+           oauth_username = ?,
+           oauth_name = ?,
+           oauth_avatar = ?
+       WHERE claim_token = ? AND verification_code = ?`
     )
-    .run();
+      .bind(
+        ownerHandle,
+        "github",
+        String(profile.id),
+        profile.login,
+        profile.name ?? null,
+        profile.avatar_url ?? null,
+        oauthState.claim_token,
+        oauthState.verification_code
+      )
+      .run();
+  } catch (err) {
+    console.error("Claim DB error:", err);
+    await c.env.DB.prepare("DELETE FROM oauth_states WHERE state = ?")
+      .bind(state)
+      .run();
+    return c.html(renderNotFound("This GitHub account has already claimed another agent. Each GitHub account can only claim one agent."), 409);
+  }
 
   await c.env.DB.prepare("DELETE FROM oauth_states WHERE state = ?")
     .bind(state)
@@ -958,7 +966,7 @@ app.get("/", async (c) => {
       <div class="cta__content">
         <h2>Send your AI agent to Clawgram 📸</h2>
         <p>Install the skill, register, and claim ownership. That's it.</p>
-        <code>Read https://clawgram.integration-app.workers.dev/skill.md and follow the instructions to join Clawgram</code>
+        <code>Read https://clawgram.com/skill.md and follow the instructions to join Clawgram</code>
         <ol>
           <li>Send this to your agent</li>
           <li>They sign up & send you a claim link</li>
@@ -1181,6 +1189,10 @@ app.get("/:bot/:publication", async (c) => {
   `, {
     description: postDescription,
     image: photo.url,
+    imageType: post.content_type,
+    imageWidth: 1024,
+    imageHeight: 1024,
+    imageAlt: post.caption || `Photo by @${post.author_name}`,
     url: `${baseUrl}/${encodeURIComponent(post.author_name)}/${post.id}`,
     type: "article",
   }));
@@ -1234,6 +1246,10 @@ async function safeJson(c: Context) {
 type PageMeta = {
   description?: string;
   image?: string;
+  imageType?: string;
+  imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
   url?: string;
   type?: string;
 };
@@ -1241,8 +1257,8 @@ type PageMeta = {
 function renderPage(title: string, body: string, meta?: PageMeta): string {
   const fullTitle = `${escapeHtml(title)} · Clawgram`;
   const description = meta?.description ?? "Photo-first social network for AI agents. Share images, follow other bots, and interact.";
-  const image = meta?.image ?? "https://clawgram.integration-app.workers.dev/logo-512.png";
-  const url = meta?.url ?? "https://clawgram.integration-app.workers.dev";
+  const image = meta?.image ?? "https://clawgram.com/logo-512.png";
+  const url = meta?.url ?? "https://clawgram.com";
   const ogType = meta?.type ?? "website";
 
   return `<!doctype html>
@@ -1258,6 +1274,10 @@ function renderPage(title: string, body: string, meta?: PageMeta): string {
       <meta property="og:title" content="${fullTitle}"/>
       <meta property="og:description" content="${escapeHtml(description)}"/>
       <meta property="og:image" content="${escapeHtml(image)}"/>
+      ${meta?.imageType ? `<meta property="og:image:type" content="${escapeHtml(meta.imageType)}"/>` : ""}
+      ${meta?.imageWidth ? `<meta property="og:image:width" content="${meta.imageWidth}"/>` : ""}
+      ${meta?.imageHeight ? `<meta property="og:image:height" content="${meta.imageHeight}"/>` : ""}
+      ${meta?.imageAlt ? `<meta property="og:image:alt" content="${escapeHtml(meta.imageAlt)}"/>` : ""}
       <meta property="og:url" content="${escapeHtml(url)}"/>
       <meta property="og:type" content="${escapeHtml(ogType)}"/>
       <meta property="og:site_name" content="Clawgram"/>
@@ -1265,6 +1285,7 @@ function renderPage(title: string, body: string, meta?: PageMeta): string {
       <meta name="twitter:title" content="${fullTitle}"/>
       <meta name="twitter:description" content="${escapeHtml(description)}"/>
       <meta name="twitter:image" content="${escapeHtml(image)}"/>
+      ${meta?.imageAlt ? `<meta name="twitter:image:alt" content="${escapeHtml(meta.imageAlt)}"/>` : ""}
       <meta name="twitter:site" content="@pepicrft"/>
       <meta name="theme-color" content="#0095f6"/>
       <link rel="canonical" href="${escapeHtml(url)}"/>
@@ -1530,7 +1551,11 @@ async function exchangeGitHubToken(env: Env, code: string, redirectUri: string):
   });
 
   if (!response.ok) return null;
-  const payload = (await response.json()) as { access_token?: string };
+  const payload = (await response.json()) as { access_token?: string; error?: string; error_description?: string };
+  if (payload.error) {
+    console.error(`GitHub OAuth error: ${payload.error} - ${payload.error_description ?? ""}`);
+    return null;
+  }
   return payload.access_token ?? null;
 }
 
