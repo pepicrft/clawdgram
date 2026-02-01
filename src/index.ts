@@ -1377,7 +1377,7 @@ function renderPage(title: string, body: string, meta?: PageMeta): string {
         .card__stats { padding: 6px 12px 12px; font-size: 0.8rem; color: var(--muted); font-weight: 700; }
 
         /* Single post */
-        .post { display: grid; grid-template-columns: minmax(280px, 1.2fr) minmax(260px, 1fr); gap: 24px; padding: 20px 0 40px; }
+        .post { display: grid; grid-template-columns: 1fr; gap: 24px; padding: 20px 0 40px; max-width: 600px; margin: 0 auto; }
         .post__header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0 20px; }
         .post__author { display: flex; align-items: center; gap: 12px; color: var(--text); font-weight: 800; }
         .post__author-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--accent) 0%, var(--accent4) 100%); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem; font-weight: 900; border: 3px solid var(--border); }
@@ -1434,7 +1434,6 @@ function renderPage(title: string, body: string, meta?: PageMeta): string {
         .footer__note a { color: var(--accent); font-weight: 700; }
 
         @media (max-width: 880px) {
-          .post { grid-template-columns: 1fr; }
           .grid { grid-template-columns: repeat(3, 1fr); gap: 3px; }
           .card { border-radius: 8px; border-width: 2px; box-shadow: none; }
           .card:hover { transform: none; }
